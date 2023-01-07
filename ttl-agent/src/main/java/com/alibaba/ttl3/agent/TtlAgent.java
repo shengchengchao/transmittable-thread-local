@@ -208,7 +208,7 @@ public final class TtlAgent implements TtlAgentStatus {
             logger.info(logTtlAgentConfig());
 
             final List<TtlTransformlet> transformletList = new ArrayList<>();
-
+            // 添加需要拦截的对应类
             transformletList.add(new JdkExecutorTtlTransformlet());
             transformletList.add(new PriorityBlockingQueueTtlTransformlet());
 

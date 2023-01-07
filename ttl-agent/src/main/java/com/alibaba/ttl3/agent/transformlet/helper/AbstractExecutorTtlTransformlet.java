@@ -70,6 +70,7 @@ public abstract class AbstractExecutorTtlTransformlet implements TtlTransformlet
         final CtClass clazz = classInfo.getCtClass();
         if (executorClassNames.contains(classInfo.getClassName())) {
             for (CtMethod method : clazz.getDeclaredMethods()) {
+                // 增强
                 updateSubmitMethodsOfExecutorClass_decorateToTtlWrapperAndSetAutoWrapperAttachment(method);
             }
 
@@ -96,8 +97,11 @@ public abstract class AbstractExecutorTtlTransformlet implements TtlTransformlet
     @SuppressFBWarnings("VA_FORMAT_STRING_USES_NEWLINE") // [ERROR] Format string should use %n rather than \n
     private void updateSubmitMethodsOfExecutorClass_decorateToTtlWrapperAndSetAutoWrapperAttachment(@NonNull final CtMethod method) throws NotFoundException, CannotCompileException {
         final int modifiers = method.getModifiers();
+        // 不是公用方法 或者私有方法的话 就退出
         if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers)) return;
-
+        // 这里主要在java.lang.Runnable构造时候调用com.alibaba.ttl.TtlRunnable#get()包装为com.alibaba.ttl.TtlRunnable
+        // 在java.util.concurrent.Callable构造时候调用com.alibaba.ttl.TtlCallable#get()包装为com.alibaba.ttl.TtlCallable
+        // 并且设置附件K-V为ttl.is.auto.wrapper=true
         CtClass[] parameterTypes = method.getParameterTypes();
         StringBuilder insertCode = new StringBuilder();
         for (int i = 0; i < parameterTypes.length; i++) {

@@ -73,6 +73,7 @@ public class TtlTransformer implements ClassFileTransformer {
 
             for (TtlTransformlet transformlet : transformletList) {
                 transformlet.doTransform(classInfo);
+                // 这里做变量，如果字节码被修改，则跳出循环返回
                 if (classInfo.isModified()) {
                     logger.info("[TtlTransformer] " + transformlet.getClass().getName() + " transformed " + classInfo.getClassName()
                             + " from classloader " + classInfo.getClassLoader()

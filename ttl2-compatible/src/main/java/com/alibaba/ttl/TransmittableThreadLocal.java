@@ -484,7 +484,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
      * <B><I>Caution:</I></B><br>
      * If the registered {@link ThreadLocal} instance is not {@link InheritableThreadLocal},
      * the instance can NOT <B><I>{@code inherit}</I></B> value from parent thread(aka. the <b>inheritable</b> ability)!
-     *
+     * 这里作为一个工具类进行使用的，外部需要调用其静态方法
      * @author Yang Fang (snoop dot fy at gmail dot com)
      * @author Jerry Lee (oldratlee at gmail dot com)
      * @see TtlRunnable
@@ -494,7 +494,8 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     public static class Transmitter {
         /**
          * Capture all {@link TransmittableThreadLocal} and registered {@link ThreadLocal} values in the current thread.
-         *
+         *  捕获当前线程绑定的所有的TransmittableThreadLocal和已经注册的ThreadLocal的值 - 使用了用时拷贝快照的策略
+         *  笔者注：它一般在构造任务实例的时候被调用，因此当前线程相对于子线程或者线程池的任务就是父线程，其实本质是捕获父线程的所有线程本地变量的值
          * @return the captured {@link TransmittableThreadLocal} values
          * @since 2.3.0
          */
@@ -577,6 +578,8 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         }
 
         /**
+         *  重放capture()方法中捕获的TransmittableThreadLocal和手动注册的ThreadLocal中的值，本质是重新拷贝holder中的所有变量，生成新的快照
+         *   笔者注：重放操作一般会在子线程或者线程池中的线程的任务执行的时候调用，因此此时的holder#get()拿到的是子线程的原来就存在的本地线程变量，重放操作就是把这些子线程原有的本地线程变量备份
          * Restore the backup {@link TransmittableThreadLocal} and
          * registered {@link ThreadLocal} values from {@link #replay(Object)}/{@link #clear()}.
          *
@@ -599,7 +602,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
                 }
             }
         }
-
+        // 私有静态类，快照，保存从holder中捕获的所有TransmittableThreadLocal和外部手动注册保存在threadLocalHolder的ThreadLocal的K-V映射快照
         private static class Snapshot {
             final HashMap<Transmittee<Object, Object>, Object> transmittee2Value;
 
@@ -935,9 +938,11 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
                 restore(backup);
             }
         }
-
+        //   保存手动注册的ThreadLocal->TtlCopier映射，这里是因为部分API提供了TtlCopier给用户实现
         private static volatile WeakHashMap<ThreadLocal<Object>, TtlCopier<Object>> threadLocalHolder = new WeakHashMap<>();
+        // threadLocalHolder更变时候的监视器
         private static final Object threadLocalHolderUpdateLock = new Object();
+        // 标记WeakHashMap中的ThreadLocal的对应值为NULL的属性，便于后面清理
         private static final Object threadLocalClearMark = new Object();
 
         /**
@@ -1080,9 +1085,9 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
                 return true;
             }
         }
-
+        // 默认的拷贝器，影子拷贝，直接返回父值
         private static final TtlCopier<Object> shadowCopier = parentValue -> parentValue;
-
+        // 私有构造，说明只能通过静态方法提供外部调用
         private Transmitter() {
             throw new InstantiationError("Must not instantiate this class");
         }
